@@ -1,0 +1,29 @@
+# Two throttle servers sharing one Redis, plus Prometheus.
+#   docker compose up --build
+#   curl -s localhost:8081/v1/check -d '{"rule":"api","key":"tenant-1"}'
+#   Prometheus: http://localhost:9090  (try rate(throttle_decisions_total[1m]))
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  throttle-a: &throttle
+    build: .
+    environment:
+      THROTTLE_REDIS_URL: redis://redis:6379
+      THROTTLE_RULES_FILE: /rules/rules.json
+    volumes:
+      - ./deploy/rules.json:/rules/rules.json:ro
+    depends_on: [redis]
+    ports: ["8081:8080"]
+
+  throttle-b:
+    <<: *throttle
+    ports: ["8082:8080"]
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [throttle-a, throttle-b]

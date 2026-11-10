@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: throttle
+    static_configs:
+      - targets: ["throttle-a:8080", "throttle-b:8080"]
